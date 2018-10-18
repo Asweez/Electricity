@@ -25,6 +25,8 @@ int electronics::getNeighborCharge(const int neighbor, const int x1, const int y
 	int tileCharge = charge[x][y];
 	switch (pixels[x][y])
 	{
+    default:
+        return charge[x][y];
 	case 3:
 		if (neighbor == (tileMeta + 2) % 4) {
 			return 0;
@@ -82,8 +84,29 @@ int electronics::getNeighborCharge(const int neighbor, const int x1, const int y
 		else {
 			return 0;
 		}
-	default:
-		return charge[x][y];
+    case 10:
+        if(neighbor != (tileMeta + 2) % 4) return 0;
+        int bitToOutput = tileMeta>>2;
+        ifstream is;
+        is.open(codeFileName);
+        for(int i = 0; i <= codeLine; i++){
+            string str;
+            if(std::getline(is, str)){//Parse a new line each time
+                if(i == codeLine){//Until we reach the specified line of code
+                    if(str.at(bitToOutput) == '1'){//If the bit of that line of code (specified by the metadata) is 1 we output charge
+                        is.close();
+                        return 1;
+                    }
+                    is.close();
+                    return 0;
+                }
+            }else{
+                is.close();//Return 0 if there is no more code
+                return 0;
+            }
+        }
+        is.close();
+        return 0;
 	}
 }
 
@@ -215,13 +238,24 @@ bool electronics::updateTile(coord tile) {
 		}
 		break;
 	case 9:
-		if ((getNeighborCharge((tileMeta + 1) % 4, x, y) & 1) ^ (getNeighborCharge((tileMeta) % 4, x, y) & 1) == 1) {
+        neighborCharge = getNeighborCharge((tileMeta) % 4, x, y);
+
+        if ((getNeighborCharge((tileMeta+1) % 4, x, y) > 0 ||neighborCharge > 0) && !(neighborCharge > 0 &&  getNeighborCharge((tileMeta+1) % 4, x, y) > 0)) {
 			charge[x][y] = 1;
 		}
 		else {
 			charge[x][y] = 0;
 		}
 		break;
+    case 10:
+        neighborCharge = getNeighborCharge(tileMeta % 4, x, y);
+        int index = tileMeta >> 2;
+        if(neighborCharge == 0){
+            codeLine &= INTMAX_MAX - (int)(std::pow(2, index));
+        }else{
+            codeLine |= (int)(std::pow(2, index));
+        }
+        break;
 	}
 	if (pixels[x][y] == 7) {
 		return (charge[x][y] & 1) != (tileCharge & 1);

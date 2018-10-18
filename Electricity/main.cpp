@@ -28,6 +28,7 @@ int width, height;
 //7 - delay
 //8 - AND gate
 //9 - XOR gate
+//10 - Code tile
 
 const coord screenSize(900, 900);
 
@@ -166,13 +167,15 @@ void updateAndDrawGraphics(ScreenEditing* scn, TileMap* tileMap, TileMap* metada
 }
 
 int main() {
-	string file = "8bitcpu.txt";
+    string saveName = "4bitcpu";
+    string path = "/Users/aidensweezey/Documents/Electricity/";
+	string file = path + saveName + ".txt";
 	load(file);
 
 	sf::RenderWindow window(sf::VideoMode(screenSize.x, screenSize.y), "Electricity");
 
 	//Electronics
-	electronics electronics(pixels, charge, metadata, width, height, &updateQueueForNextFrame);
+	electronics electronics(pixels, charge, metadata, width, height, &updateQueueForNextFrame, path + saveName + "-code.txt" );
 	coord previousTilePlaced;
 
 	//Metadata
@@ -200,7 +203,7 @@ int main() {
 	bool shouldDrawMeta = false;
 	bool shouldUpdateTileMap = false;
 
-	if (!font.loadFromFile("consola.ttf")) {
+	if (!font.loadFromFile("/Users/aidensweezey/Documents/Electricity/Electricity/consola.ttf")) {
 		cout << "Font not loaded";
 	}
 	sf::Text text;
@@ -352,6 +355,13 @@ int main() {
 						}
 						shouldUpdateTileMap = true;
 					}
+                    if(sf::Keyboard::isKeyPressed(sf::Keyboard::LBracket)){
+                        scn.tryZoom(-6);
+                        canTranslate = false;
+                    }else if(sf::Keyboard::isKeyPressed(sf::Keyboard::RBracket)){
+                        scn.tryZoom(6);
+                        canTranslate = false;
+                    }
 				}
 				if (canRotate && sf::Keyboard::isKeyPressed(sf::Keyboard::R)) {
 					scn.rotate(pixels, metadata, charge);
@@ -392,7 +402,7 @@ int main() {
 					}
 				}
 
-				if (canDeleteArea && sf::Keyboard::isKeyPressed(sf::Keyboard::Delete)) {
+                if (canDeleteArea && sf::Keyboard::isKeyPressed(sf::Keyboard::Backspace)) {
 					scn.deleteArea(pixels, metadata, charge);
 					for (int x = scn.selectionStart.x; x < scn.selectionStart.x + scn.selectionSize.x; x++) {
 						for (int y = scn.selectionStart.y; y < scn.selectionStart.y + scn.selectionSize.y; y++) {
@@ -452,10 +462,10 @@ int main() {
 		if (!sf::Keyboard::isKeyPressed(sf::Keyboard::R) && !sf::Keyboard::isKeyPressed(sf::Keyboard::J) && !sf::Keyboard::isKeyPressed(sf::Keyboard::H)) {
 			canRotate = true;
 		}
-		if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Delete)) {
+		if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Backspace)) {
 			canDeleteArea = true;
 		}
-		if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Up) && !sf::Keyboard::isKeyPressed(sf::Keyboard::Left) && !sf::Keyboard::isKeyPressed(sf::Keyboard::Down) && !sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
+		if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Up) && !sf::Keyboard::isKeyPressed(sf::Keyboard::Left) && !sf::Keyboard::isKeyPressed(sf::Keyboard::Down) && !sf::Keyboard::isKeyPressed(sf::Keyboard::Right) && !sf::Keyboard::isKeyPressed(sf::Keyboard::RBracket) && !sf::Keyboard::isKeyPressed(sf::Keyboard::LBracket)) {
 			canTranslate = true;
 		}
 
