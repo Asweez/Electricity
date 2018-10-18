@@ -18,7 +18,9 @@ public:
 	}
 	int getNeighborCharge(const int neighbor, const int x1, const int y1);
 	static coord getNeighborCoord(int neighbor, int x, int y, int distance = 1);
-	bool updateTile(coord tile);
+	int updateTile(coord tile);
+	int getNeighborsToUpdate(coord, int, int, int, int);
+	void addNeighborToUpdate(int neighbor, int* currentToUpdate);
 	void initTile(int x, int y);
 
 private:

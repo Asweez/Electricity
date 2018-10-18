@@ -87,7 +87,7 @@ int electronics::getNeighborCharge(const int neighbor, const int x1, const int y
 	}
 }
 
-bool electronics::updateTile(coord tile) {
+int electronics::updateTile(coord tile) {
 	int x = tile.x;
 	int y = tile.y;
 	bool forceUpdate = false;
@@ -223,15 +223,65 @@ bool electronics::updateTile(coord tile) {
 		}
 		break;
 	}
-	if (pixels[x][y] == 7) {
-		return (charge[x][y] & 1) != (tileCharge & 1);
-	}
-	else {
-		if (tileCharge != charge[x][y] || forceUpdate) {
-			return true;
+	if (forceUpdate) return 15;
+	if (tileCharge == charge[x][y] && tileMeta == metadata[x][y]) return 0;
+	return getNeighborsToUpdate(tile, tileCharge, tileMeta, charge[x][y], metadata[x][y]);
+}
+
+/*
+	Returns a number that contains all updates to do (2 bits per direction)
+*/
+int electronics::getNeighborsToUpdate(coord tile, int prevCharge, int prevMeta, int newCharge, int newMeta) {
+	int toUpdate = 0;
+	switch (pixels[tile.x][tile.y]) {
+	default:
+		return 15;
+	case 1:
+		for (int i = 0; i < 4; i++) {
+			coord n = getNeighborCoord(i, tile.x, tile.y);
+			if (pixels[n.x][n.y] == 1) {
+				if (charge[n.x][n.y] > newCharge || charge[n.x][n.y] == 0) {
+					addNeighborToUpdate(i, &toUpdate);
+				}
+			}
+			else if (pixels[n.x][n.y] != 0) {
+				addNeighborToUpdate(i, &toUpdate);
+			}
+		}
+		return toUpdate;
+	case 3:
+		return 15 - std::pow(2, newMeta % 4);
+	case 5:
+		if (prevMeta == newMeta) {
+			toUpdate = 0;
+			if (prevCharge % 2 != newCharge % 2) {
+				addNeighborToUpdate((newMeta + 2) % 4, &toUpdate);
+			}
+			if ((prevCharge >> 1) != (newCharge >> 1)) {
+				addNeighborToUpdate((newMeta + 3) % 4, &toUpdate);
+			}
+			return toUpdate;
+		}
+		else {
+			return 15;
 		}
 	}
-	return false;
+}
+
+void electronics::addNeighborToUpdate(int neighbor, int *currentToUpdate) {
+	if (neighbor == 0) {
+		*currentToUpdate |= 1;
+	}
+	else if (neighbor == 1) {
+		*currentToUpdate |= 2;
+	}
+	else if (neighbor == 2) {
+		*currentToUpdate |= 4;
+
+	}
+	else if (neighbor == 3) {
+		*currentToUpdate |= 8;
+	}
 }
 
 void electronics::initTile(int x, int y) {

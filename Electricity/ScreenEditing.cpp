@@ -30,7 +30,6 @@ void ScreenEditing::tryZoom(float delta) {
 			centerTile.y = (height - 1) - zoom;
 		}
 	}
-	cout << "Zoom: " << zoom << ", Center: (" << centerTile.x << ", " << centerTile.y << ")"<<endl;
 }
 
 bool ScreenEditing::tryMove(const int dir) {
