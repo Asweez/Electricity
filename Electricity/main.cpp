@@ -38,6 +38,7 @@ int **metadata;
 bool canPlaceAgain = true;
 list <coord> updateQueue;
 list<coord> updateQueueForNextFrame;
+std::vector<coord> codeTiles;
 
 void load(string filename) {
 	ifstream in;
@@ -54,6 +55,14 @@ void load(string filename) {
 	int desiredSizeX, desiredSizeY;
 	desiredSizeX = 200;
 	desiredSizeY = 200;
+    int codeTileNum;
+    in >> codeTileNum;
+    for(int i = 0; i < codeTileNum; i++){
+        int x, y;
+        in >> x;
+        in >> y;
+        codeTiles.push_back(coord(x, y));
+    }
 	width = desiredSizeX;
 	height = desiredSizeY;
 	pixels = new int*[desiredSizeX];
@@ -111,6 +120,11 @@ void save(string filename) {
 	if (out) {
 		out << width << ' ';
 		out << height << endl;
+        out << codeTiles.size() << endl;
+        for(int i = 0; i < codeTiles.size(); i++){
+            out << codeTiles[i].x << ' ';
+            out << codeTiles[i].y << endl;
+        }
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {
 				out << pixels[x][y] << ' ';
@@ -174,8 +188,9 @@ int main() {
 
 	sf::RenderWindow window(sf::VideoMode(screenSize.x, screenSize.y), "Electricity");
 
+    
 	//Electronics
-	electronics electronics(pixels, charge, metadata, width, height, &updateQueueForNextFrame, path + saveName + "-code.txt" );
+	electronics electronics(pixels, charge, metadata, width, height, &updateQueueForNextFrame, &codeTiles, path + saveName + "-code.txt" );
 	coord previousTilePlaced;
 
 	//Metadata
@@ -275,6 +290,10 @@ int main() {
 					//Signal Blocker
 					i = 9;
 				}
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num0)) {
+                    //Code
+                    i = 10;
+                }
 
 				if (i != 0 && pixels[tileX][tileY] != i) {
 					coord newTile = coord(tileX, tileY);
@@ -292,6 +311,7 @@ int main() {
 				}
 
 				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space) && pixels[tileX][tileY] != 0) {
+                    electronics.tileDeleted(coord(tileX, tileY));
 					placeTile(coord(tileX, tileY), 0, electronics);
 					shouldUpdateTileMap = true;
 				}

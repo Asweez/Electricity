@@ -85,28 +85,8 @@ int electronics::getNeighborCharge(const int neighbor, const int x1, const int y
 			return 0;
 		}
     case 10:
-        if(neighbor != (tileMeta + 2) % 4) return 0;
-        int bitToOutput = tileMeta>>2;
-        ifstream is;
-        is.open(codeFileName);
-        for(int i = 0; i <= codeLine; i++){
-            string str;
-            if(std::getline(is, str)){//Parse a new line each time
-                if(i == codeLine){//Until we reach the specified line of code
-                    if(str.at(bitToOutput) == '1'){//If the bit of that line of code (specified by the metadata) is 1 we output charge
-                        is.close();
-                        return 1;
-                    }
-                    is.close();
-                    return 0;
-                }
-            }else{
-                is.close();//Return 0 if there is no more code
-                return 0;
-            }
-        }
-        is.close();
-        return 0;
+        if(neighbor != (tileMeta) % 4) return 0;
+        return tileCharge;
 	}
 }
 
@@ -248,13 +228,46 @@ bool electronics::updateTile(coord tile) {
 		}
 		break;
     case 10:
+        if(std::find(codeTiles->begin(), codeTiles->end(), tile) != codeTiles->end()){
+            codeTiles->push_back(tile);
+        }
         neighborCharge = getNeighborCharge(tileMeta % 4, x, y);
         int index = tileMeta >> 2;
+        int prevCodeLine = codeLine;
         if(neighborCharge == 0){
             codeLine &= INTMAX_MAX - (int)(std::pow(2, index));
         }else{
             codeLine |= (int)(std::pow(2, index));
         }
+        if(prevCodeLine != codeLine){
+            for(int i = 0; i < codeTiles->size(); i++){
+                if((*codeTiles)[i] != tile){
+                    nextFrameUpdateQueue->push_back((*codeTiles)[i]);
+                }
+            }
+        }
+        int bitToOutput = tileMeta>>2;
+        ifstream is;
+        is.open(codeFileName);
+        if(is){
+            for(int i = 0; i <= codeLine; i++){
+                string str;
+                if(std::getline(is, str)){//Parse a new line each time
+                    if(i == codeLine){//Until we reach the specified line of code
+                        if(str.at(bitToOutput) == '1'){//If the bit of that line of code (specified by the metadata) is 1 we output charge
+                            charge[x][y] = 1;
+                            break;
+                        }
+                        charge[x][y] = 0;
+                        break;
+                    }
+                }else{
+                    charge[x][y] = 0;
+                    break;
+                }
+            }
+        }
+        is.close();
         break;
 	}
 	if (pixels[x][y] == 7) {
@@ -280,5 +293,27 @@ void electronics::initTile(int x, int y) {
 	case 7:
 		metadata[x][y] = 2000;
 		break;
+    case 10:
+        codeTiles->push_back(coord(x, y));
+        break;
 	}
+}
+
+void electronics::tileDeleted(coord tile){
+    switch(pixels[tile.x][tile.y]){
+        case 10:
+            codeLine &= INTMAX_MAX - (int)(std::pow(2, metadata[tile.x][tile.y] >> 2));
+            int pos = -1;
+            for(int i = 0; i < codeTiles->size(); i++){
+                if((*codeTiles)[i] == tile){
+                    pos = i;
+                }else{
+                    nextFrameUpdateQueue->push_back((*codeTiles)[i]);
+                }
+            }
+            if(pos != -1){
+                codeTiles->erase(codeTiles->begin() + pos);
+            }
+            break;
+    }
 }

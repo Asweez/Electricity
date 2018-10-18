@@ -121,7 +121,7 @@ void TileMap::updateMetadata(sf::Vector2f tileSize, const int tile, const int me
 			}
             break;
         case 10:
-            if(i == meta){
+            if(i == meta % 4){
                 c = sf::Color(255, 100, 0);
             }else if(i == (meta + 2) % 4){
                 c = sf::Color::Blue;
@@ -156,9 +156,9 @@ sf::Color TileMap::getColor(const int i, const int charge) {
 	case 3:
 		return sf::Color::Red;
 	case 4:
-		return charge > 0 ? sf::Color(0, 255, 255) : sf::Color(0, 80, 80);
+		return charge > 0 ? sf::Color(255, 100, 0) : sf::Color(0, 80, 80);
 	case 5:
-		return sf::Color::Magenta;
+		return sf::Color(150, 0, 150);
 	case 6:
 		return charge > 0 ? sf::Color(150, 50, 255) : sf::Color(70, 0, 225);
 	case 7:
