@@ -127,6 +127,18 @@ void TileMap::updateMetadata(sf::Vector2f tileSize, const int tile, const int me
                 c = sf::Color::Blue;
             }
             break;
+        case 11:
+            if(i == meta % 4){
+                c = sf::Color(255, 100, 0);
+            }else if(i == (meta + 2) % 4){
+                c = sf::Color::Blue;
+            }
+            break;
+        case 12:
+            if(i == meta % 4){
+                c = sf::Color::Blue;
+            }
+            break;
 		}
 
 		quad[0].color = c;
@@ -169,6 +181,12 @@ sf::Color TileMap::getColor(const int i, const int charge) {
 		return charge > 0 ? sf::Color(180, 0, 0) : sf::Color(100, 0, 0);
     case 10:
         return charge > 0 ? sf::Color::Green : sf::Color(0, 100, 0);
+    case 11:
+        return charge > 0 ? sf::Color(0, 0, 200) : sf::Color(0, 0, 100);
+    case 12:
+        return (charge % 2) > 0 ? sf::Color(200, 180, 0) : sf::Color(150, 100, 0);
+    case 13:
+        return charge == 0 ? sf::Color(100, 0, 100) : sf::Color(100,255,100);
 	}
 	return sf::Color::Black;
 }

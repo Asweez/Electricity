@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <ctime>
 #include <thread>
+#include <unordered_set>
 using namespace std;
 
 int width, height;
@@ -29,6 +30,8 @@ int width, height;
 //8 - AND gate
 //9 - XOR gate
 //10 - Code tile
+//11 - WIFI
+//12 - Clock
 
 const coord screenSize(900, 900);
 
@@ -39,6 +42,8 @@ bool canPlaceAgain = true;
 list <coord> updateQueue;
 list<coord> updateQueueForNextFrame;
 std::vector<coord> codeTiles;
+unordered_map<int, list<coord>*> wifiTiles;
+unordered_map<int, bool> wifiCharge;
 
 void load(string filename) {
 	ifstream in;
@@ -53,16 +58,8 @@ void load(string filename) {
 		in >> inSizeY;
 	}
 	int desiredSizeX, desiredSizeY;
-	desiredSizeX = 200;
-	desiredSizeY = 200;
-    int codeTileNum;
-    in >> codeTileNum;
-    for(int i = 0; i < codeTileNum; i++){
-        int x, y;
-        in >> x;
-        in >> y;
-        codeTiles.push_back(coord(x, y));
-    }
+	desiredSizeX = 600;
+	desiredSizeY = 600;
 	width = desiredSizeX;
 	height = desiredSizeY;
 	pixels = new int*[desiredSizeX];
@@ -84,6 +81,20 @@ void load(string filename) {
 				if (pixels[i][j] < 0) {
 					pixels[i][j] = 0;
 				}
+                if(pixels[i][j] == 10){
+                    codeTiles.push_back(coord(i, j));
+                }
+                if(pixels[i][j] == 11){
+                    int channel = metadata[i][j] >> 2;
+                    list<coord>* wifiList;
+                    if(wifiTiles.count(channel) != 1){
+                        wifiList = new list<coord>();
+                        wifiTiles.insert({channel, wifiList});
+                    }else{
+                        wifiList = wifiTiles[channel];
+                    }
+                    wifiList->push_back(coord(i, j));
+                }
 				if (charge[i][j] < 0) {
 					charge[i][j] = 0;
 				}
@@ -120,11 +131,6 @@ void save(string filename) {
 	if (out) {
 		out << width << ' ';
 		out << height << endl;
-        out << codeTiles.size() << endl;
-        for(int i = 0; i < codeTiles.size(); i++){
-            out << codeTiles[i].x << ' ';
-            out << codeTiles[i].y << endl;
-        }
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {
 				out << pixels[x][y] << ' ';
@@ -181,7 +187,7 @@ void updateAndDrawGraphics(ScreenEditing* scn, TileMap* tileMap, TileMap* metada
 }
 
 int main() {
-    string saveName = "4bitcpu";
+    string saveName = "16bitcpu";
     string path = "/Users/aidensweezey/Documents/Electricity/";
 	string file = path + saveName + ".txt";
 	load(file);
@@ -190,7 +196,7 @@ int main() {
 
     
 	//Electronics
-	electronics electronics(pixels, charge, metadata, width, height, &updateQueueForNextFrame, &codeTiles, path + saveName + "-code.txt" );
+	electronics electronics(pixels, charge, metadata, width, height, &updateQueueForNextFrame, &codeTiles, path + saveName + "-code.txt", &wifiTiles, &wifiCharge);
 	coord previousTilePlaced;
 
 	//Metadata
@@ -217,17 +223,16 @@ int main() {
 	delete tileSizeStart;
 	bool shouldDrawMeta = false;
 	bool shouldUpdateTileMap = false;
-
+    
 	if (!font.loadFromFile("/Users/aidensweezey/Documents/Electricity/Electricity/consola.ttf")) {
 		cout << "Font not loaded";
 	}
 	sf::Text text;
-	clock_t updateTime;
 	window.setActive(false);
 	std::thread drawThread(updateAndDrawGraphics, &scn, &tileMap, &metadataTileMap, &window, &text, &shouldDrawMeta, &shouldUpdateTileMap);
+    unordered_set<int> keypresses;
 	while (window.isOpen())
 	{
-		clock_t startTime = clock();
 		sf::Event event;
 		while (window.pollEvent(event))
 		{
@@ -239,12 +244,65 @@ int main() {
 			else if (event.type == sf::Event::MouseWheelScrolled) {
 				scn.tryZoom(event.mouseWheelScroll.delta);
 				shouldUpdateTileMap = true;
-			}
+            }else if(event.type == sf::Event::KeyPressed){
+                keypresses.insert(event.key.code);
+            }else if(event.type == sf::Event::KeyReleased){
+                keypresses.erase(event.key.code);
+                switch(event.key.code){
+                    case sf::Keyboard::E:
+                        canChangeMeta = true;
+                        break;
+                    case sf::Keyboard::Q:
+                        canChangeMeta = true;
+                        break;
+                    case sf::Keyboard::C:
+                        canDoCommand = true;
+                        break;
+                    case sf::Keyboard::X:
+                        canDoCommand = true;
+                        break;
+                    case sf::Keyboard::V:
+                        canDoCommand = true;
+                        break;
+                    case sf::Keyboard::R:
+                        canRotate = true;
+                        break;
+                    case sf::Keyboard::J:
+                        canRotate = true;
+                        break;
+                    case sf::Keyboard::H:
+                        canRotate = true;
+                        break;
+                    case sf::Keyboard::Backspace:
+                        canDeleteArea = true;
+                        break;
+                    case sf::Keyboard::Up:
+                        canTranslate = true;
+                        break;
+                    case sf::Keyboard::Right:
+                        canTranslate = true;
+                        break;
+                    case sf::Keyboard::Left:
+                        canTranslate = true;
+                        break;
+                    case sf::Keyboard::Down:
+                        canTranslate = true;
+                        break;
+                    case sf::Keyboard::LBracket:
+                        canTranslate = true;
+                        break;
+                    case sf::Keyboard::RBracket:
+                        canTranslate = true;
+                        break;
+                    default:
+                        break;
+                }
+            }
 
 		}
 		text.setCharacterSize(18);
 		text.setFont(font);
-
+        bool shouldUpdateDesc = false;
 		if (window.hasFocus()) {
 			coord mousePos = sf::Mouse::getPosition(window);
 			int tileX = mousePos.x / scn.getTileSize();
@@ -254,43 +312,55 @@ int main() {
 			tileY = globalTileCoord.y;
 			if (tileX >= 0 && tileX < width && tileY >= 0 && tileY < height) {
 				int i = 0;
-				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1)) {
+                if (keypresses.find(sf::Keyboard::Num1) != keypresses.end()) {
 					//Wire
-					i = 1;
+                    if(sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt)){
+                        i = 11;
+                    }else{
+                        i = 1;
+                    }
 				}
-				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2)) {
+                if (keypresses.find(sf::Keyboard::Num2) != keypresses.end()) {
 					//Battery
-					i = 2;
+                    if(sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt)){
+                        i = 12;
+                    }else{
+                        i = 2;
+                    }
 				}
-				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num3)) {
+                if (keypresses.find(sf::Keyboard::Num3) != keypresses.end()) {
 					//Not
-					i = 3;
+                    if(sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt)){
+                        i = 13;
+                    }else{
+                        i = 3;
+                    }
 				}
-				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num4)) {
+                if (keypresses.find(sf::Keyboard::Num4) != keypresses.end()) {
 					//Switch
 					i = 4;
 				}
-				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num5)) {
+                if (keypresses.find(sf::Keyboard::Num5) != keypresses.end()) {
 					//Cross wire
 					i = 5;
 				}
-				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num6)) {
+                if (keypresses.find(sf::Keyboard::Num6) != keypresses.end()) {
 					//Signal Blocker
 					i = 6;
 				}
-				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num7)) {
+                if (keypresses.find(sf::Keyboard::Num7) != keypresses.end()) {
 					//Signal Blocker
 					i = 7;
 				}
-				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num8)) {
+                if (keypresses.find(sf::Keyboard::Num8) != keypresses.end()) {
 					//Signal Blocker
 					i = 8;
 				}
-				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num9)) {
+                if (keypresses.find(sf::Keyboard::Num9) != keypresses.end()) {
 					//Signal Blocker
 					i = 9;
 				}
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num0)) {
+                if (keypresses.find(sf::Keyboard::Num0) != keypresses.end()) {
                     //Code
                     i = 10;
                 }
@@ -310,37 +380,39 @@ int main() {
 					shouldUpdateTileMap = true;
 				}
 
-				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space) && pixels[tileX][tileY] != 0) {
+                if (keypresses.find(sf::Keyboard::Space) != keypresses.end() && pixels[tileX][tileY] != 0) {
                     electronics.tileDeleted(coord(tileX, tileY));
 					placeTile(coord(tileX, tileY), 0, electronics);
 					shouldUpdateTileMap = true;
 				}
 				if (canChangeMeta) {
-					int amountToChange = sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) ? 4 : 1;
-					if (sf::Keyboard::isKeyPressed(sf::Keyboard::E)) {
+                    int amountToChange = sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) ? 4 : (sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt) ? 16 : 1);
+                    int prevMeta = metadata[tileX][tileY];
+                    if (keypresses.find(sf::Keyboard::E) != keypresses.end()) {
 						metadata[tileX][tileY] += amountToChange;
 						canChangeMeta = false;
 					}
-					if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) {
-						metadata[tileX][tileY] = std::max(0, metadata[tileX][tileY] - amountToChange);
+                    if (keypresses.find(sf::Keyboard::Q) != keypresses.end()) {
+						metadata[tileX][tileY] = std::max(0, prevMeta - amountToChange);
 						canChangeMeta = false;
 					}
 					if (!canChangeMeta) {
+                        electronics.tileMetaChanged(coord(tileX, tileY), prevMeta);
 						updateQueue.push_back(coord(-tileX, -tileY));
 					}
 				}
 
 				int moveDir = -1;
-				if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
+                if (keypresses.find(sf::Keyboard::A) != keypresses.end()) {
 					moveDir = 3;
 				}
-				if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
+                if (keypresses.find(sf::Keyboard::W) != keypresses.end()) {
 					moveDir = 0;
 				}
-				if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
+                if (keypresses.find(sf::Keyboard::S) != keypresses.end()) {
 					moveDir = 2;
 				}
-				if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
+                if (keypresses.find(sf::Keyboard::D) != keypresses.end()) {
 					moveDir = 1;
 				}
 				if (moveDir != -1) {
@@ -353,16 +425,16 @@ int main() {
 				}
 				if (canTranslate) {
 					moveDir = -1;
-					if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
+                    if (keypresses.find(sf::Keyboard::Left) != keypresses.end()) {
 						moveDir = 3;
 					}
-					if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
+                    if (keypresses.find(sf::Keyboard::Up) != keypresses.end()) {
 						moveDir = 0;
 					}
-					if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+                    if (keypresses.find(sf::Keyboard::Down) != keypresses.end()) {
 						moveDir = 2;
 					}
-					if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
+                    if (keypresses.find(sf::Keyboard::Right) != keypresses.end()) {
 						moveDir = 1;
 					}
 					if (moveDir != -1) {
@@ -375,39 +447,39 @@ int main() {
 						}
 						shouldUpdateTileMap = true;
 					}
-                    if(sf::Keyboard::isKeyPressed(sf::Keyboard::LBracket)){
+                    if (keypresses.find(sf::Keyboard::LBracket) != keypresses.end()) {
                         scn.tryZoom(-6);
                         canTranslate = false;
-                    }else if(sf::Keyboard::isKeyPressed(sf::Keyboard::RBracket)){
+                    }else if (keypresses.find(sf::Keyboard::RBracket) != keypresses.end()) {
                         scn.tryZoom(6);
                         canTranslate = false;
                     }
 				}
-				if (canRotate && sf::Keyboard::isKeyPressed(sf::Keyboard::R)) {
+				if (canRotate && keypresses.find(sf::Keyboard::R) != keypresses.end()) {
 					scn.rotate(pixels, metadata, charge);
 					shouldUpdateTileMap = true;
 					canRotate = false;
 				}
-				if (canRotate && sf::Keyboard::isKeyPressed(sf::Keyboard::H)) {
+				if (canRotate && keypresses.find(sf::Keyboard::H) != keypresses.end()) {
 					scn.flipHorizontally(pixels, metadata, charge);
 					shouldUpdateTileMap = true;
 					canRotate = false;
 				}
-				if (canRotate && sf::Keyboard::isKeyPressed(sf::Keyboard::J)) {
+				if (canRotate && keypresses.find(sf::Keyboard::J) != keypresses.end()) {
 					scn.flipVertically(pixels, metadata, charge);
 					shouldUpdateTileMap = true;
 					canRotate = false;
 				}
 				if (canDoCommand && sf::Keyboard::isKeyPressed(sf::Keyboard::LControl)) {
 					bool shouldQueueUpdates = false;
-					if (sf::Keyboard::isKeyPressed(sf::Keyboard::C)) {
+					if (keypresses.find(sf::Keyboard::C) != keypresses.end()) {
 						scn.copy(pixels, metadata, charge, false);
 						canDoCommand = false;
-					}else if (sf::Keyboard::isKeyPressed(sf::Keyboard::X)) {
+					}else if(keypresses.find(sf::Keyboard::X) != keypresses.end()) {
 						scn.copy(pixels, metadata, charge, true);
 						shouldQueueUpdates = true;
 						canDoCommand = false;
-					}else if (sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
+					}else if (keypresses.find(sf::Keyboard::V) != keypresses.end()) {
 						scn.paste(coord(tileX, tileY), pixels, metadata, charge);
 						shouldQueueUpdates = true;
 						canDoCommand = false;
@@ -422,7 +494,7 @@ int main() {
 					}
 				}
 
-                if (canDeleteArea && sf::Keyboard::isKeyPressed(sf::Keyboard::Backspace)) {
+                if (canDeleteArea && keypresses.find(sf::Keyboard::Backspace) != keypresses.end()) {
 					scn.deleteArea(pixels, metadata, charge);
 					for (int x = scn.selectionStart.x; x < scn.selectionStart.x + scn.selectionSize.x; x++) {
 						for (int y = scn.selectionStart.y; y < scn.selectionStart.y + scn.selectionSize.y; y++) {
@@ -434,13 +506,14 @@ int main() {
 				}
 
 				if (pixels[tileX][tileY] >= 0) {
-					
+                    shouldUpdateDesc = true;
 					selectedTile = coord(tileX, tileY);
 					metadataTileMap.updateMetadata(sf::Vector2f(scn.getTileSize(), scn.getTileSize()), pixels[tileX][tileY], metadata[tileX][tileY], scn.zoom, width, height, sf::Vector2i(scn.getUpperLeftCorner().x, scn.getUpperLeftCorner().y), selectedTile);
 					shouldDrawMeta = true;
 				}
 				else {
 					shouldDrawMeta = false;
+                    shouldUpdateDesc = selectedTile.x != -1;
 					selectedTile = coord(-1, -1);
 				}
 
@@ -472,26 +545,8 @@ int main() {
 				}
 			}
 		}
-
-		if (!sf::Keyboard::isKeyPressed(sf::Keyboard::E) && !sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) {
-			canChangeMeta = true;
-		}
-		if (!sf::Keyboard::isKeyPressed(sf::Keyboard::C) && !sf::Keyboard::isKeyPressed(sf::Keyboard::X) && !sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
-			canDoCommand = true;
-		}
-		if (!sf::Keyboard::isKeyPressed(sf::Keyboard::R) && !sf::Keyboard::isKeyPressed(sf::Keyboard::J) && !sf::Keyboard::isKeyPressed(sf::Keyboard::H)) {
-			canRotate = true;
-		}
-		if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Backspace)) {
-			canDeleteArea = true;
-		}
-		if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Up) && !sf::Keyboard::isKeyPressed(sf::Keyboard::Left) && !sf::Keyboard::isKeyPressed(sf::Keyboard::Down) && !sf::Keyboard::isKeyPressed(sf::Keyboard::Right) && !sf::Keyboard::isKeyPressed(sf::Keyboard::RBracket) && !sf::Keyboard::isKeyPressed(sf::Keyboard::LBracket)) {
-			canTranslate = true;
-		}
-
-		clock_t updateStart = clock();
 		int updatesThisLoop = 0;
-		while (!updateQueue.empty() && updatesThisLoop < 1000) {
+		while (!updateQueue.empty() && updatesThisLoop < 100000) {
 			coord tileToUpdate = updateQueue.front();
 			updateQueue.pop_front();
 			if (electronics.updateTile(tileToUpdate)) { 
@@ -504,12 +559,12 @@ int main() {
 			queueUpdate(updateQueueForNextFrame.front());
 			updateQueueForNextFrame.pop_front();
 		}
-		updateTime = clock() - updateStart;
-		clock_t drawStart = clock();
-		std::ostringstream oss;
-		oss<< updatesThisLoop << " Updates   SelectedTile: (" <<selectedTile.x<<","<<selectedTile.y<<")   Metadata: " << (selectedTile.x >= 0 ? metadata[selectedTile.x][selectedTile.y] : 0) << " Charge: " << (selectedTile.x >= 0 ? charge[selectedTile.x][selectedTile.y] : 0);
-		startTime = clock();
-		text.setString(oss.str());
+        if(shouldUpdateDesc){
+            std::ostringstream oss;
+            oss<< updatesThisLoop << " Updates   SelectedTile: (" <<selectedTile.x<<","<<selectedTile.y<<")   Metadata: " << (selectedTile.x >= 0 ? metadata[selectedTile.x][selectedTile.y] : 0) << " Charge: " << (selectedTile.x >= 0 ? charge[selectedTile.x][selectedTile.y] : 0);
+            oss << electronics.getExtraDesc(selectedTile);
+            text.setString(oss.str());
+        }
 	}
 	return 0;
 

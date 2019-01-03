@@ -34,7 +34,7 @@ bool coord::operator!= (const coord& c1) {
 	return c1.x != this->x || c1.y != this->y;
 }
 
-bool coord::operator== (const coord& c1) {
+bool coord::operator== (const coord& c1) const{
 	return c1.x == this->x && c1.y == this->y;
 }
 

@@ -30,7 +30,6 @@ void ScreenEditing::tryZoom(float delta) {
 			centerTile.y = (height - 1) - zoom;
 		}
 	}
-	cout << "Zoom: " << zoom << ", Center: (" << centerTile.x << ", " << centerTile.y << ")"<<endl;
 }
 
 bool ScreenEditing::tryMove(const int dir) {
@@ -143,6 +142,8 @@ int getRotatedMeta(int tile, int meta) {
 		rotation = (meta & 1) + (2 * (meta & 2));
 		rotation = (rotation + 1) % 4;
 		return rotation + (delay << 2);
+    case 13:
+        return meta;
 	default:
 		return (meta + 1) % 4;
 	}
