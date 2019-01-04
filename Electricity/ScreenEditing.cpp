@@ -142,6 +142,8 @@ int getRotatedMeta(int tile, int meta) {
 		rotation = (meta & 1) + (2 * (meta & 2));
 		rotation = (rotation + 1) % 4;
 		return rotation + (delay << 2);
+    case 13:
+        return meta;
 	default:
 		return (meta + 1) % 4;
 	}
