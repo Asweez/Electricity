@@ -145,14 +145,17 @@ void save(string filename) {
 	}
 }
 
-void queueNeighborUpdates(coord tile) {
+void queueNeighborUpdates(coord tile, int toUpdate) {
 	int x = tile.x;
 	int y = tile.y;
 	for (int i = 0; i < 4; i++) {
-		coord neighbor = electronics::getNeighborCoord(i, x, y);
-		if (std::find(updateQueue.begin(), updateQueue.end(), neighbor) == updateQueue.end()) {
-			updateQueue.push_back(neighbor);
+		if (toUpdate % 2 == 1) {
+			coord neighbor = electronics::getNeighborCoord(i, x, y);
+			if (std::find(updateQueue.begin(), updateQueue.end(), neighbor) == updateQueue.end()) {
+				updateQueue.push_back(neighbor);
+			}
 		}
+		toUpdate = toUpdate >> 1;
 	}
 }
 
@@ -171,7 +174,7 @@ void placeTile(const coord tile, int type, electronics& electronics, coord* prev
 	charge[tile.x][tile.y] = 0;
 	electronics.initTile(tile.x, tile.y);
 	queueUpdate(coord(tile.x, tile.y));
-	queueNeighborUpdates(coord(tile.x, tile.y));
+	queueNeighborUpdates(coord(tile.x, tile.y), 15);
 }
 
 void updateAndDrawGraphics(ScreenEditing* scn, TileMap* tileMap, TileMap* metadataTilemap, sf::RenderWindow* window, sf::Text* text, bool* shouldDrawMeta, bool* shouldUpdateTileMap) {
@@ -187,8 +190,8 @@ void updateAndDrawGraphics(ScreenEditing* scn, TileMap* tileMap, TileMap* metada
 }
 
 int main() {
-    string saveName = "16bitcpu";
-    string path = "/Users/aidensweezey/Documents/Electricity/";
+  string saveName = "16bitcpu";
+  string path = "/Users/aidensweezey/Documents/Electricity/";
 	string file = path + saveName + ".txt";
 	load(file);
 
@@ -549,8 +552,9 @@ int main() {
 		while (!updateQueue.empty() && updatesThisLoop < 100000) {
 			coord tileToUpdate = updateQueue.front();
 			updateQueue.pop_front();
-			if (electronics.updateTile(tileToUpdate)) { 
-				queueNeighborUpdates(coord(abs(tileToUpdate.x), abs(tileToUpdate.y)));
+			int toUpdate = electronics.updateTile(tileToUpdate);
+			queueNeighborUpdates(coord(abs(tileToUpdate.x), abs(tileToUpdate.y)), toUpdate);
+			if (toUpdate > 0) {
 				shouldUpdateTileMap = true;
 			}
 			updatesThisLoop++;
